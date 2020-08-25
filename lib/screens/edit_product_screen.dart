@@ -17,6 +17,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
    final _imageUrlFocusnode=FocusNode();
 
    final _formkey=GlobalKey<FormState>();
+   bool _isLoading=false;
 
    var _isinit=true;
    var _initValues={
@@ -94,11 +95,24 @@ class _EditProductScreenState extends State<EditProductScreen> {
       return;
     }
     _formkey.currentState.save();
+    setState(() {
+      _isLoading=true;
+    });
     if(_editedProduct.id!=null){
       Provider.of<Products>(context, listen: false).updateProduct(_editedProduct.id,_editedProduct);
-    }else {
-      Provider.of<Products>(context, listen: false).addProduct(_editedProduct);
+      setState(() {
+        _isLoading=false;
+      });
       Navigator.of(context).pop();
+    }else {
+      Provider.of<Products>(context, listen: false)
+          .addProduct(_editedProduct)
+          .then((value) {
+            setState(() {
+              _isLoading=false;
+            });
+        Navigator.of(context).pop();
+      });
     }
   }
 
@@ -114,7 +128,11 @@ class _EditProductScreenState extends State<EditProductScreen> {
           ),
         ],
       ),
-      body:Padding(
+      body:(_isLoading)?
+      Center(
+        child: CircularProgressIndicator(),
+      )
+          :Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formkey,

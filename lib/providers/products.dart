@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 
 import './product.dart';
+import 'package:http/http.dart' as http;
 
 class Products with ChangeNotifier {
   List<Product> _items = [
@@ -64,17 +66,28 @@ class Products with ChangeNotifier {
   //   notifyListeners();
   // }
 
-  void addProduct(Product product) {
-    final newProduct=Product(
-      title: product.title,
-      description: product.description,
-      price: product.price,
-      imageUrl: product.imageUrl,
-      id: DateTime.now().toString(),
-    );
-    _items.add(newProduct);
-    //_items.insert(0,newproduct); to insert at index o
-    notifyListeners();
+  Future<void> addProduct(Product product) async{
+    //.json is for only firebase not for every api
+    const url='https://shopapp-26520.firebaseio.com/products.json';
+    return http.post(url,body:json.encode({
+      'title':product.title,
+      'description':product.description,
+      'imageurl':product.imageUrl,
+      'price':product.price,
+      'isFavourite':product.isFavorite,
+    })).then((response){
+      final newProduct=Product(
+        title: product.title,
+        description: product.description,
+        price: product.price,
+        imageUrl: product.imageUrl,
+        id: json.decode(response.body)['name'], //it returns unique id
+      );
+      _items.add(newProduct);
+      //_items.insert(0,newproduct); to insert at index o
+      notifyListeners();
+    });
+
   }
 
   void updateProduct(String id,Product newProduct){
