@@ -1,4 +1,7 @@
+
+
 import 'package:flutter/material.dart';
+import 'package:shop_app/models/http_exception.dart';
 import 'dart:convert';
 
 import './product.dart';
@@ -66,40 +69,85 @@ class Products with ChangeNotifier {
   //   notifyListeners();
   // }
 
+  Future<void> fetchAndSetProducts() async{
+    const url='https://shopapp-26520.firebaseio.com/products.json';
+    try {
+      final response = await http.get(url);
+      final extractedData=json.decode(response.body) as Map<String,dynamic>;
+      final List<Product> loadedProducts=[];
+      extractedData.forEach((prodId, prodData) {
+        loadedProducts.add(Product(
+          id: prodId,
+          title: prodData['title'],
+          description: prodData['description'],
+          price: prodData['price'],
+          imageUrl: prodData['imageurl'],
+          isFavorite: prodData['isFavourite'],
+        ));
+      });
+      _items=loadedProducts;
+      notifyListeners();
+    }catch(error){
+      throw error;
+    }
+  }
+
   Future<void> addProduct(Product product) async{
     //.json is for only firebase not for every api
     const url='https://shopapp-26520.firebaseio.com/products.json';
-    return http.post(url,body:json.encode({
+    try{
+   final response= await http.post(url,body:json.encode({
       'title':product.title,
       'description':product.description,
       'imageurl':product.imageUrl,
       'price':product.price,
       'isFavourite':product.isFavorite,
-    })).then((response){
-      final newProduct=Product(
-        title: product.title,
-        description: product.description,
-        price: product.price,
-        imageUrl: product.imageUrl,
-        id: json.decode(response.body)['name'], //it returns unique id
-      );
-      _items.add(newProduct);
-      //_items.insert(0,newproduct); to insert at index o
-      notifyListeners();
-    });
+    }));
+   final newProduct=Product(
+     title: product.title,
+     description: product.description,
+     price: product.price,
+     imageUrl: product.imageUrl,
+     id: json.decode(response.body)['name'], //it returns unique id
+   );
+   _items.add(newProduct);
+   //_items.insert(0,newproduct); to insert at index o
+   notifyListeners();
+    }catch(error){
+      throw error;
+    }
+
 
   }
 
-  void updateProduct(String id,Product newProduct){
+  Future<void> updateProduct(String id,Product newProduct) async{
    final prodIndex= _items.indexWhere((element) => element.id==id);
    if(prodIndex>=0){
+     final url='https://shopapp-26520.firebaseio.com/products/${id}.json';
+     await http.patch(url,body:json.encode({
+       'title':newProduct.title,
+       'description':newProduct.description,
+       'price':newProduct.price,
+       'imageurl':newProduct.imageUrl,
+       'isFavourite':newProduct.isFavorite,
+     }));
      _items[prodIndex]=newProduct;
    }
    notifyListeners();
   }
 
-  void deleteProduct(String id){
-    _items.removeWhere((element) => element.id==id);
+  Future<void> deleteProduct(String id) async{
+    final url='https://shopapp-26520.firebaseio.com/products/${id}.json';
+    final existingProductIndex=_items.indexWhere((element) => element.id==id);
+    var existingProduct=_items[existingProductIndex];
+    _items.removeAt(existingProductIndex);
     notifyListeners();
+    final response=await http.delete(url);
+      if(response.statusCode>400){
+        _items.insert(existingProductIndex, existingProduct);
+        notifyListeners();
+        throw HttpException('Could not delete products');
+      }
+      existingProduct=null;
   }
 }
