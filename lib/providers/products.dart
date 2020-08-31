@@ -1,5 +1,7 @@
 
 
+import 'dart:html';
+
 import 'package:flutter/material.dart';
 import 'package:shop_app/models/http_exception.dart';
 import 'dart:convert';
@@ -74,6 +76,9 @@ class Products with ChangeNotifier {
     try {
       final response = await http.get(url);
       final extractedData=json.decode(response.body) as Map<String,dynamic>;
+      if(extractedData==null){
+        return;
+      }
       final List<Product> loadedProducts=[];
       extractedData.forEach((prodId, prodData) {
         loadedProducts.add(Product(
